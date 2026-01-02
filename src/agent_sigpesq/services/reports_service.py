@@ -1,3 +1,10 @@
+"""
+Service module for managing report downloads.
+
+This module provides the `SigpesqReportService`, which orchestrates the
+login and download process for various report categories using Selenium.
+"""
+
 import os
 import time
 from typing import List
@@ -23,10 +30,30 @@ load_dotenv()
 class SigpesqReportService(BaseAgent[None, bool]):
     """
     Service to handle report downloads on the Sigpesq portal using Selenium.
-    Uses Strategy Pattern for different report categories.
+    
+    This class implements the BaseAgent interface and uses the Strategy Pattern
+    to handle different types of report downloads. It manages the browser session,
+    authentication, and the execution of configured download strategies.
+    
+    Attributes:
+        username (str): Sigpesq username from environment variables.
+        password (str): Sigpesq password from environment variables.
+        login_url (str): URL to the login page.
+        reports_url (str): URL to the reports list page.
+        headless (bool): Whether to run the browser in headless mode.
+        download_dir (str): Directory to save downloaded reports.
+        driver: The Selenium WebDriver instance.
+        strategies (List[ReportDownloadStrategy]): List of download strategies to execute.
     """
 
     def __init__(self, headless: bool = True, download_dir: str = "reports"):
+        """
+        Initializes the SigpesqReportService.
+
+        Args:
+            headless (bool): Whether to run the browser in headless mode. Defaults to True.
+            download_dir (str): Directory where reports will be saved. Defaults to "reports".
+        """
         self.username = os.getenv("SIGPESQ_USER")
         self.password = os.getenv("SIGPESQ_PASSWORD")
         self.login_url = "https://sigpesq.ifes.edu.br/Login.aspx"
@@ -43,6 +70,7 @@ class SigpesqReportService(BaseAgent[None, bool]):
         ]
 
     def _init_driver(self):
+        """Initializes the Selenium WebDriver using the BrowserFactory."""
         if not self.driver:
             self.driver = BrowserFactory.create_chrome_driver(
                 headless=self.headless, 
@@ -56,6 +84,22 @@ class SigpesqReportService(BaseAgent[None, bool]):
             })
 
     async def run(self, input_data: None = None) -> bool:
+        """
+        Executes the report download process.
+
+        1. Initializes the driver.
+        2. Logs in to the portal.
+        3. Navigates to the reports page.
+        4. Iterates through configured strategies to download reports.
+        5. Cleans up the driver.
+
+        Args:
+            input_data: Unused input data (None).
+
+        Returns:
+            bool: True if all operations completed processing (individual failures may occur), 
+                  False if a critical error terminated the process.
+        """
         try:
             # Ensure reports dir exists
             if not os.path.exists(self.download_dir):
@@ -78,6 +122,12 @@ class SigpesqReportService(BaseAgent[None, bool]):
                 self.driver = None
 
     def _login(self) -> bool:
+        """
+        Performs login to the Sigpesq portal.
+
+        Returns:
+            bool: True if login was successful, False otherwise.
+        """
         if not self.username or not self.password:
             print("Error: SIGPESQ_USER or SIGPESQ_PASSWORD not set in .env")
             return False
@@ -128,8 +178,13 @@ class SigpesqReportService(BaseAgent[None, bool]):
 
     def _download_all_reports(self) -> bool:
         """
-        Download all reports using the Strategy Pattern.
-        Each strategy handles its own category.
+        Download all reports using the configured strategies.
+
+        Iterates through the `self.strategies` list and executes the `download`
+        method for each one.
+
+        Returns:
+            bool: True if at least one report was successfully downloaded.
         """
         abs_reports_dir = os.path.abspath(self.download_dir)
         success_count = 0

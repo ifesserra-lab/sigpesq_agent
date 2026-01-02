@@ -1,3 +1,10 @@
+"""
+Strategies module for Agent Sigpesq.
+
+Defines the strategy interfaces and concrete implementations for different 
+types of report downloads.
+"""
+
 from .report_download_strategy import ReportDownloadStrategy
 from .research_groups_strategy import ResearchGroupsDownloadStrategy
 from .projects_strategy import ProjectsDownloadStrategy

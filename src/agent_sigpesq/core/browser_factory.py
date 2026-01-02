@@ -1,3 +1,11 @@
+"""
+Module for browser creation and configuration.
+
+This module provides a factory class for creating Selenium WebDriver instances
+with standardized configurations for this project, including headless mode
+and download settings.
+"""
+
 import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -7,12 +15,26 @@ from selenium.webdriver.chrome.options import Options
 class BrowserFactory:
     """
     Factory for creating Selenium WebDriver instances.
+    
+    This class encapsulates the configuration and instantiation logic for
+    web drivers to ensure consistency across the application.
     """
     
     @staticmethod
-    def create_chrome_driver(headless: bool = True, download_dir: str = "reports"):
+    def create_chrome_driver(headless: bool = True, download_dir: str = "reports") -> webdriver.Chrome:
         """
         Creates and configures a Chrome WebDriver.
+
+        Args:
+            headless (bool): Whether to run the browser in headless mode. Defaults to True.
+            download_dir (str): Relative or absolute path to the directory where downloads should be saved. 
+                                Defaults to "reports".
+
+        Returns:
+            webdriver.Chrome: A configured Chrome WebDriver instance.
+
+        Raises:
+            Exception: If the driver cannot be installed or initialized.
         """
         options = Options()
         if headless:
