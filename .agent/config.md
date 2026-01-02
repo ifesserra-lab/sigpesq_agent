@@ -1,17 +1,16 @@
-# Agent Configuration -eo_lib
+# Agent Configuration - agent_sigpesq
 
 ## 🏗 Technical Stack
 - **Language**: Python 3.12+
 - **Build System**: Hatchling (see `pyproject.toml`)
-- **Main Dependencies**: SQLAlchemy 2.0+
+- **Main Dependencies**: Selenium, Pydantic
 - **Test Framework**: Pytest
 - **Linting Tools**: Black, Flake8, isort
 
 ## 📂 Project Structure Map
-- `src/eo_lib/domain/`: `BaseEntity` and core abstractions.
-- `src/eo_lib/infrastructure/`: Repository strategies (SQL, JSON, Memory).
-- `src/eo_lib/services/`: `GenericService`.
-- `src/eo_lib/controllers/`: `GenericController`.
+- `src/agent_sigpesq/core/`: Application core logic.
+- `src/agent_sigpesq/services/`: Service layer.
+- `src/agent_sigpesq/strategies/`: Strategy pattern implementations.
 - `tests/`: TDD suite mimicking the `src/` structure.
 - `docs/`: Full project documentation (SRS, SDD, Backlog, Milestones).
 
@@ -26,7 +25,6 @@
 ## 📦 Distribution Standards
 - Adhere to SemVer 2.0.0.
 - Minimal external dependencies.
-- Unified Domain/ORM models (DRY).
 
 ## 📝 Governance Templates
 Use these patterns for all new issues:
