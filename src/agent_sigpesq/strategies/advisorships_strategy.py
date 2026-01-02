@@ -2,7 +2,7 @@
 Strategy implementation for downloading Advisorships reports.
 """
 
-from .report_download_strategy import ReportDownloadStrategy
+from .report_download_strategy import BaseSeleniumStrategy
 import os
 import time
 from selenium.webdriver.common.by import By
@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 
-class AdvisorshipsDownloadStrategy(ReportDownloadStrategy):
+class AdvisorshipsDownloadStrategy(BaseSeleniumStrategy):
     """
     Strategy for downloading reports related to Advisorships.
     """
@@ -26,13 +26,6 @@ class AdvisorshipsDownloadStrategy(ReportDownloadStrategy):
     def download(self, driver, reports_dir: str) -> bool:
         """
         Executes the download simulation for Advisorships.
-
-        Args:
-            driver: The Selenium WebDriver instance.
-            reports_dir (str): The target directory for the report.
-
-        Returns:
-            bool: Always True (simulation).
         """
         print(f"Processing {self.get_category_name()}...")
         
@@ -41,16 +34,7 @@ class AdvisorshipsDownloadStrategy(ReportDownloadStrategy):
             button_id = self.get_button_id()
             
             # 1. Ensure accordion is open
-            try:
-                # Check if button is visible
-                wait.until(EC.visibility_of_element_located((By.ID, button_id)))
-            except:
-                print("Button not visible, attempting to open accordion...")
-                # Find header containing "Orientações"
-                xpath = "//div[contains(@class, 'accordionHeader') and contains(., 'Orientações')]"
-                header = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-                header.click()
-                time.sleep(1) # Wait for animation
+            self._ensure_accordion_open(wait, button_id, "Orientações")
 
             # 2. Find Year Dropdown
             dropdown_id = "ContentPlaceHolder_ddlRelOrientacao_Ano"
@@ -68,8 +52,6 @@ class AdvisorshipsDownloadStrategy(ReportDownloadStrategy):
                 
                 # Check for year-specific directory
                 year_dir = os.path.join(reports_dir, "advisorships", year)
-                if not os.path.exists(year_dir):
-                    os.makedirs(year_dir)
 
                 # Re-locate element to avoid StaleElementReferenceException
                 dropdown_element = wait.until(EC.presence_of_element_located((By.ID, dropdown_id)))
@@ -82,7 +64,7 @@ class AdvisorshipsDownloadStrategy(ReportDownloadStrategy):
                 btn = wait.until(EC.element_to_be_clickable((By.ID, button_id)))
                 btn.click()
                 
-                # Wait for download
+                # 4. Wait for download and move file
                 if self._wait_and_move_file(reports_dir, year_dir):
                     download_count += 1
                 else:
@@ -93,34 +75,3 @@ class AdvisorshipsDownloadStrategy(ReportDownloadStrategy):
         except Exception as e:
             print(f"Error downloading {self.get_category_name()}: {e}")
             return False
-
-    def _wait_and_move_file(self, download_dir: str, target_dir: str, timeout: int = 60) -> bool:
-        """Waits for download and moves file to target directory."""
-        print(f"Waiting for download for target: {target_dir}...")
-        start_time = time.time()
-        initial_files = set(os.listdir(download_dir))
-        
-        while time.time() - start_time < timeout:
-            current_files = set(os.listdir(download_dir))
-            new_files = current_files - initial_files
-            
-            if any(f.endswith('.crdownload') or f.endswith('.tmp') for f in new_files):
-                time.sleep(1)
-                continue
-                
-            if new_files:
-                downloaded_file = list(new_files)[0]
-                src_path = os.path.join(download_dir, downloaded_file)
-                dest_path = os.path.join(target_dir, downloaded_file)
-                
-                if os.path.exists(dest_path):
-                    os.remove(dest_path)
-                    
-                os.rename(src_path, dest_path)
-                print(f"Successfully downloaded and moved to: {dest_path}")
-                return True
-                
-            time.sleep(1)
-            
-        print("Timeout waiting for download.")
-        return False

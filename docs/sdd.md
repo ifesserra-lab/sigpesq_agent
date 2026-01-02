@@ -22,7 +22,11 @@ The system follows a modular architecture based on MVC and SOLID principles.
 
 ### 3.2 Service Module
 - **SigpesqLoginService**: Implements the specific logic for authentication.
-- **SigpesqReportService**: Handles navigation to `https://sigpesq.ifes.edu.br/web/relatorio/lista.aspx`, expansion of report categories, and triggering downloads for all "Emitir" buttons.
+- **SigpesqReportService**: Handles navigation to `https://sigpesq.ifes.edu.br/web/relatorio/lista.aspx` and orchestrates strategies.
+- **Strategies**:
+    - **ReportDownloadStrategy (Interface)**: Defines the contract for download strategies.
+    - **BaseSeleniumStrategy (Abstract)**: Implements common Selenium logic (accordion handling, file moving).
+    - **Concrete Strategies**: `ResearchGroupsDownloadStrategy`, `ProjectsDownloadStrategy`, `AdvisorshipsDownloadStrategy`.
 
 ### 3.3 Data Design
 - Credentials are read from environment variables (.env).
