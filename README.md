@@ -30,6 +30,7 @@ The project follows **SOLID**, **MVC**, and **Strategy Pattern** principles:
 
 - **Strategy Pattern**: Each report category has its own download strategy
 - **Factory Pattern**: `BrowserFactory` manages Selenium WebDriver instances
+- **Template Method Pattern**: `BaseSeleniumStrategy` defines the skeleton for download operations.
 - **IEEE SDD Documentation**: Architecture documented in `docs/sdd.md`
 
 ### Folder Structure
@@ -38,16 +39,16 @@ The project follows **SOLID**, **MVC**, and **Strategy Pattern** principles:
 agent_sigpesq/
 ├── src/
 │   ├── core/
-│   │   ├── base_agent.py          # Abstract base class
+│   │   ├── base_agent.py          # Abstract base class for Agent
 │   │   └── browser_factory.py     # WebDriver factory
 │   ├── services/
 │   │   ├── sigpesq_service.py     # Login service
 │   │   └── reports_service.py     # Download orchestrator
 │   └── strategies/
-│       ├── report_download_strategy.py     # Abstract interface
+│       ├── report_download_strategy.py     # BaseSeleniumStrategy & Interface
 │       ├── research_groups_strategy.py     # Research groups strategy
 │       ├── projects_strategy.py            # Projects strategy
-│       └── advisorships_strategy.py        # Advisorships strategy (by year)
+│       └── advisorships_strategy.py        # Advisorships strategy
 ├── reports/                       # Output directory for reports
 ├── agent.py                       # Main entry point
 └── requirements.txt               # Python dependencies
@@ -110,9 +111,9 @@ After execution, reports will be organized in:
 
 ```
 reports/
-├── research_groups/
+├── research_group/
 │   └── Relatorio_DD_MM_YYYY.xlsx
-├── projects/
+├── research_projects/
 │   └── Relatorio_DD_MM_YYYY.xlsx
 └── advisorships/
     ├── 2016/
@@ -120,7 +121,7 @@ reports/
     ├── 2017/
     │   └── Relatorio_DD_MM_YYYY.xlsx
     ...
-    └── 2025/
+    └── 2026/
         └── Relatorio_DD_MM_YYYY.xlsx
 ```
 
@@ -139,9 +140,10 @@ service = SigpesqReportService(headless=False, download_dir="reports")
 
 1. Create a new strategy in `src/strategies/`:
    ```python
-   from src.strategies.report_download_strategy import ReportDownloadStrategy
+   from src.strategies.report_download_strategy import BaseSeleniumStrategy
+   from selenium.webdriver.common.by import By
    
-   class NewCategoryDownloadStrategy(ReportDownloadStrategy):
+   class NewCategoryDownloadStrategy(BaseSeleniumStrategy):
        def get_category_name(self) -> str:
            return "Category Name"
        
@@ -149,8 +151,18 @@ service = SigpesqReportService(headless=False, download_dir="reports")
            return "emit_button_id"
        
        def download(self, driver, reports_dir) -> bool:
-           # Implement download logic
-           pass
+           wait = WebDriverWait(driver, 10)
+           
+           # 1. Ensure accordion is open
+           # Pass the button ID to check visibility before trying to open
+           self._ensure_accordion_open(wait, self.get_button_id(), "Accordion Header Text")
+           
+           # 2. Click download
+           driver.find_element(By.ID, self.get_button_id()).click()
+           
+           # 3. Wait for file
+           target_dir = os.path.join(reports_dir, "new_category_folder")
+           return self._wait_and_move_file(reports_dir, target_dir)
    ```
 
 2. Register the strategy in `src/services/reports_service.py`:
@@ -182,8 +194,9 @@ asyncio.run(test())
 
 ## 📚 Additional Documentation
 
-- **Architecture**: `docs/sdd_sigpesq.md` (IEEE 1016 Software Design Description)
-- **Project Constitution**: `constitution.md` (Principles and guidelines)
+- **Architecture**: `docs/sdd.md` (IEEE 1016 Software Design Description)
+- **Extension Guide**: `docs/extending_the_agent.md`
+- **Project Constitution**: `docs/constitution.md` (Principles and guidelines)
 
 ## ⚠️ Troubleshooting
 
