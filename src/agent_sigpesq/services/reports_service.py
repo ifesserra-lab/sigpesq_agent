@@ -65,8 +65,8 @@ class SigpesqReportService(BaseAgent[None, bool]):
         # Initialize strategies in the order requested by user
         self.strategies: List[ReportDownloadStrategy] = [
             ResearchGroupsDownloadStrategy(),
-            ProjectsDownloadStrategy(),
-            AdvisorshipsDownloadStrategy()
+            # ProjectsDownloadStrategy(),
+            # AdvisorshipsDownloadStrategy()
         ]
 
     def _init_driver(self):
@@ -135,7 +135,7 @@ class SigpesqReportService(BaseAgent[None, bool]):
         print(f"Navigating to {self.login_url}...")
         self.driver.get(self.login_url)
         
-        wait = WebDriverWait(self.driver, 20)
+        wait = WebDriverWait(self.driver, 30)
         
         try:
             # Wait for any input to ensure page is loaded
@@ -169,11 +169,11 @@ class SigpesqReportService(BaseAgent[None, bool]):
                 return True
             except TimeoutException:
                 print("Login verification timed out.")
-                # self.driver.save_screenshot("login_timeout_debug.png")
+                self.driver.save_screenshot("login_timeout_debug.png")
                 return False
         except Exception as e:
             print(f"Error during login process: {e}")
-            # self.driver.save_screenshot("login_exception_debug.png")
+            self.driver.save_screenshot("login_exception_debug.png")
             return False
 
     def _download_all_reports(self) -> bool:
