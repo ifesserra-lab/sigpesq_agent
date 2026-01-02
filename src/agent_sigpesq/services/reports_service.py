@@ -64,9 +64,9 @@ class SigpesqReportService(BaseAgent[None, bool]):
         
         # Initialize strategies in the order requested by user
         self.strategies: List[ReportDownloadStrategy] = [
-            # ResearchGroupsDownloadStrategy(),
+            ResearchGroupsDownloadStrategy(),
             ProjectsDownloadStrategy(),
-            # AdvisorshipsDownloadStrategy()
+            AdvisorshipsDownloadStrategy()
         ]
 
     def _init_driver(self):
