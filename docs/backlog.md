@@ -17,3 +17,12 @@
 - **PR**: [#2](https://github.com/ifesserra-lab/sigpesq_agent/pull/2)
 - **Description**: Removed unused documentation references (SQLAlchemy, libbase) and standardized `__init__.py` exports.
 - **Commit**: `refactor: remove unused deps docs and standardize exports (closes #1)`
+
+### Bugs
+- [x] Fix agent execution error (DevTools/ChromeDriver) - [PR #5](https://github.com/ifesserra-lab/sigpesq_agent/pull/5)
+- [x] Fix agent execution error (DevTools/ChromeDriver) - [PR #5](https://github.com/ifesserra-lab/sigpesq_agent/pull/5)
+
+### [v0.2.0] Refactor Strategies & Implement Downloads
+- **PR**: [#8](https://github.com/ifesserra-lab/sigpesq_agent/pull/8)
+- **Description**: Implemented real download strategies for Research Groups, Projects, and Advisorships. Refactored common logic into `BaseSeleniumStrategy`.
+- **Commit**: `refactor: abstract common download logic into BaseSeleniumStrategy (closes #7)`

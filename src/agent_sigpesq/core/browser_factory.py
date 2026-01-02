@@ -8,8 +8,7 @@ and download settings.
 
 import os
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 class BrowserFactory:
@@ -43,6 +42,9 @@ class BrowserFactory:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--remote-debugging-port=9222")
+        options.add_argument("--disable-software-rasterizer")
         
         # Ensure download directory is absolute
         abs_download_dir = os.path.abspath(download_dir)
@@ -57,8 +59,8 @@ class BrowserFactory:
         options.add_experimental_option("prefs", prefs)
         
         try:
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
+            # Rely on Selenium Manager (Selenium 4.10+) to handle driver installation
+            driver = webdriver.Chrome(options=options)
             return driver
         except Exception as e:
             print(f"Error creating Chrome driver: {e}")
