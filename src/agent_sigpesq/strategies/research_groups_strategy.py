@@ -2,9 +2,13 @@
 Strategy implementation for downloading Research Groups reports.
 """
 
-from .report_download_strategy import ReportDownloadStrategy
+from .report_download_strategy import BaseSeleniumStrategy
+import os
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-class ResearchGroupsDownloadStrategy(ReportDownloadStrategy):
+class ResearchGroupsDownloadStrategy(BaseSeleniumStrategy):
     """
     Strategy for downloading reports related to Research Groups.
     """
@@ -15,20 +19,32 @@ class ResearchGroupsDownloadStrategy(ReportDownloadStrategy):
         
     def get_button_id(self) -> str:
         """Returns the button ID for Research Groups."""
-        # Placeholder ID, actual ID would be needed from page source.
-        return "btnEmitirGrupos" 
+        return "ContentPlaceHolder_btnRel_GruposPesquisa" 
         
     def download(self, driver, reports_dir: str) -> bool:
         """
         Executes the download simulation for Research Groups.
-
-        Args:
-            driver: The Selenium WebDriver instance.
-            reports_dir (str): The target directory for the report.
-
-        Returns:
-            bool: Always True (simulation).
         """
         print(f"Processing {self.get_category_name()}...")
-        # Generic implementation since we lost the specific one.
-        return True
+        
+        try:
+            # 1. Prepare target subdirectory
+            reports_subdir = os.path.join(reports_dir, "research_group")
+
+            wait = WebDriverWait(driver, 20)
+            button_id = self.get_button_id()
+            
+            # 2. Ensure accordion is open
+            self._ensure_accordion_open(wait, button_id, "Grupos de Pesquisa")
+
+            # 3. Click the download button
+            print(f"Clicking button {button_id}...")
+            btn = wait.until(EC.element_to_be_clickable((By.ID, button_id)))
+            btn.click()
+            
+            # 4. Wait for download and move file
+            return self._wait_and_move_file(reports_dir, reports_subdir)
+            
+        except Exception as e:
+            print(f"Error downloading {self.get_category_name()}: {e}")
+            return False
