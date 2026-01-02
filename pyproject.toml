@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent_sigpesq"
+version = "0.1.0"
+description = "Automated agent for downloading reports from the Sigpesq portal."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [{ name = "Paulo Junior", email = "pauulajunior@gmail.com" }]
+dependencies = ["selenium", "python-dotenv", "pydantic", "webdriver-manager"]
+
+[project.urls]
+Homepage = "https://github.com/ifesserra-lab/sigpesq_agent"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "flake8",
+    "isort",
+    "build",
+    "twine",
+    "lefthook",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--cov=agent_sigpesq --cov-report=term-missing"
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_sigpesq"]
