@@ -64,8 +64,8 @@ class SigpesqReportService(BaseAgent[None, bool]):
         
         # Initialize strategies in the order requested by user
         self.strategies: List[ReportDownloadStrategy] = [
-            ResearchGroupsDownloadStrategy(),
-            # ProjectsDownloadStrategy(),
+            # ResearchGroupsDownloadStrategy(),
+            ProjectsDownloadStrategy(),
             # AdvisorshipsDownloadStrategy()
         ]
 
