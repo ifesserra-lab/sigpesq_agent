@@ -1,11 +1,14 @@
 """
-Module defining the abstract strategy for report downloads.
+Module defining the abstract strategy for report downloads using Playwright.
 
 This module provides the interface `ReportDownloadStrategy` that all specific
 report category strategies must implement.
 """
 
 from abc import ABC, abstractmethod
+import os
+import asyncio
+from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError
 
 class ReportDownloadStrategy(ABC):
     """
@@ -36,85 +39,78 @@ class ReportDownloadStrategy(ABC):
         pass
         
     @abstractmethod
-    def download(self, driver, reports_dir: str) -> bool:
+    async def download(self, page: Page, reports_dir: str) -> bool:
         """
         Executes the download process for this specific strategy.
 
         Args:
-            driver: The Selenium WebDriver instance.
+            page: The Playwright Page instance.
             reports_dir (str): The absolute path to the directory where reports should be saved.
 
         Returns:
-            bool: True if the download (or simulation) was successful, False otherwise.
+            bool: True if the download was successful, False otherwise.
         """
+        pass
 
-import os
-import time
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-class BaseSeleniumStrategy(ReportDownloadStrategy):
+class BasePlaywrightStrategy(ReportDownloadStrategy):
     """
-    Base strategy providing common Selenium operations for report downloads.
+    Base strategy providing common Playwright operations for report downloads.
     """
 
-    def _ensure_accordion_open(self, wait: WebDriverWait, button_id: str, accordion_text: str):
+    async def _ensure_accordion_open(self, page: Page, button_id: str, accordion_text: str):
         """
         Ensures the accordion section containing the desired button is open.
         """
         try:
-            # Check if button is visible first
-            try:
-                wait.until(EC.visibility_of_element_located((By.ID, button_id)))
-                return # Already visible/open
-            except:
-                pass # Proceed to open
+            # Check if button is visible
+            is_visible = await page.is_visible(f"#{button_id}")
+            if is_visible:
+                return
 
             print(f"Button {button_id} not visible, attempting to open accordion '{accordion_text}'...")
             xpath = f"//div[contains(@class, 'accordionHeader') and contains(., '{accordion_text}')]"
-            header = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-            header.click()
-            time.sleep(1) # Wait for animation
+            
+            # Click the header
+            await page.click(xpath)
+            
+            # Wait for button to become visible (animation)
+            try:
+                await page.wait_for_selector(f"#{button_id}", state="visible", timeout=5000)
+            except PlaywrightTimeoutError:
+                print(f"Warning: Button {button_id} still not visible after clicking accordion.")
+                
         except Exception as e:
             print(f"Error opening accordion '{accordion_text}': {e}")
 
-    def _wait_and_move_file(self, download_dir: str, target_dir: str, timeout: int = 60) -> bool:
+    async def _handle_download_and_move(self, page: Page, selector: str, download_dir: str, target_subdir: str) -> bool:
         """
-        Waits for a file to appear in the download directory and moves it to the target directory.
+        Handles the download event and moves the file to the target directory.
         """
-        print(f"Waiting for download for target: {target_dir}...")
-        
-        # Ensure target directory exists
-        if not os.path.exists(target_dir):
-            os.makedirs(target_dir)
+        try:
+            print(f"Waiting for download for target: {target_subdir}...")
+            
+            # Ensure target directory exists
+            if not os.path.exists(target_subdir):
+                os.makedirs(target_subdir)
 
-        start_time = time.time()
-        initial_files = set(os.listdir(download_dir))
-        
-        while time.time() - start_time < timeout:
-            current_files = set(os.listdir(download_dir))
-            new_files = current_files - initial_files
+            async with page.expect_download(timeout=60000) as download_info:
+                # Trigger the download
+                await page.click(selector)
             
-            # Check for crdownload/tmp files
-            if any(f.endswith('.crdownload') or f.endswith('.tmp') for f in new_files):
-                time.sleep(1)
-                continue
-                
-            if new_files:
-                downloaded_file = list(new_files)[0]
-                src_path = os.path.join(download_dir, downloaded_file)
-                dest_path = os.path.join(target_dir, downloaded_file)
-                
-                # Handle overwrite if exists
-                if os.path.exists(dest_path):
-                    os.remove(dest_path)
-                    
-                os.rename(src_path, dest_path)
-                print(f"Successfully downloaded and moved to: {dest_path}")
-                return True
-                
-            time.sleep(1)
+            download = await download_info.value
             
-        print("Timeout waiting for download.")
-        return False
+            # Use original filename from server
+            original_filename = download.suggested_filename
+            dest_path = os.path.join(target_subdir, original_filename)
+            
+            # Handle overwrite
+            if os.path.exists(dest_path):
+                os.remove(dest_path)
+                
+            await download.save_as(dest_path)
+            print(f"Successfully downloaded and saved to: {dest_path}")
+            return True
+            
+        except Exception as e:
+            print(f"Error during download handling: {e}")
+            return False

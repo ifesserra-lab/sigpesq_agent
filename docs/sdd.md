@@ -24,13 +24,23 @@ The system follows a modular architecture based on MVC and SOLID principles.
 - **SigpesqLoginService**: Implements the specific logic for authentication.
 - **SigpesqReportService**: Handles navigation to `https://sigpesq.ifes.edu.br/web/relatorio/lista.aspx` and orchestrates strategies.
 - **Strategies**:
-    - **ReportDownloadStrategy (Interface)**: Defines the contract for download strategies.
+    class BrowserFactory {
+        <<factory>>
+        +create_browser_context(headless: bool, download_dir: str) BrowserContext$
+    }
     - **BaseSeleniumStrategy (Abstract)**: Implements common Selenium logic (accordion handling, file moving).
     - **Concrete Strategies**: `ResearchGroupsDownloadStrategy`, `ProjectsDownloadStrategy`, `AdvisorshipsDownloadStrategy`.
 
 ### 3.3 Data Design
 - Credentials are read from environment variables (.env).
 - Reports are saved to a local `reports/` folder.
+
+### 3.4 CLI Design
+The `agent.py` entry point will be refactored to use `argparse` to support subcommands:
+- `download-all`: Executes all configured strategies (default).
+- `download-groups`: Executes only `ResearchGroupsDownloadStrategy`.
+- `download-projects`: Executes only `ProjectsDownloadStrategy`.
+- `download-advisorships`: Executes only `AdvisorshipsDownloadStrategy`.
 
 ## 4. User Interface Design
 Automated interaction via Selenium. The report service will navigate to the reports list and click expansion/download buttons sequentially.
@@ -40,3 +50,9 @@ Automated interaction via Selenium. The report service will navigate to the repo
 - **Strategy/Template Method**: Used in BaseAgent.
 - **SOLID**: Single Responsibility (ReportService focuses on document generation).
 - **Factory**: BrowserFactory for WebDriver configuration.
+
+## 6. Test Strategy
+Unit tests will be implemented for each strategy using `unittest.mock` to simulate `selenium.webdriver` behavior.
+- **Mocking**: `WebDriver`, `WebElement`, `WebDriverWait`.
+- **Scope**: Verify that `download()` calls expected driver methods (find_element, click, execute_script).
+

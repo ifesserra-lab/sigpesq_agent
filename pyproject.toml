@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent_sigpesq"
-version = "0.1.0"
+version = "0.2.0"
 description = "Automated agent for downloading reports from the Sigpesq portal."
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
 authors = [{ name = "Paulo Junior", email = "pauulajunior@gmail.com" }]
-dependencies = ["selenium", "python-dotenv", "pydantic", "webdriver-manager"]
+dependencies = ["playwright", "python-dotenv", "pydantic"]
 
 [project.urls]
 Homepage = "https://github.com/ifesserra-lab/sigpesq_agent"

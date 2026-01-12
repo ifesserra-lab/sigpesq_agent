@@ -13,7 +13,7 @@ The system automates the login process and downloads three categories of researc
 - **SRS**: Software Requirements Specification
 - **IFES**: Instituto Federal do Espírito Santo
 - **Sigpesq**: Sistema de Gestão de Pesquisa (Research Management System)
-- **CDP**: Chrome DevTools Protocol
+- **CDP**: Chrome DevTools Protocol (managed via Playwright)
 - **MVC**: Model-View-Controller
 - **SOLID**: Single Responsibility, Open-Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
 
@@ -30,6 +30,15 @@ The system automates the login process and downloads three categories of researc
 - System handles CPF input mask correctly
 - System verifies successful login before proceeding
 - System provides error messages for failed authentication
+
+#### FR-1.1: CLI Strategy Selection
+**Priority**: Medium
+**Description**: The system shall provide CLI commands to execute specific download strategies individually (Groups, Projects, Advisorships).
+
+**Acceptance Criteria**:
+- System accepts command line arguments to select strategy
+- System supports `download-groups`, `download-projects`, `download-advisorships` commands
+- System supports default `download-all` behavior
 
 #### FR-2: Research Groups Report Download
 **Priority**: High  
@@ -124,6 +133,7 @@ The system automates the login process and downloads three categories of researc
 - Factory Pattern for object creation
 - Clear separation of concerns (MVC)
 - Comprehensive documentation (IEEE SDD)
+- **Test Coverage**: Each strategy execution flow must be covered by unit tests mocking the WebDriver.
 
 #### NFR-4: Usability
 **Priority**: Medium  
