@@ -13,7 +13,7 @@ The system automates the login process and downloads three categories of researc
 - **SRS**: Software Requirements Specification
 - **IFES**: Instituto Federal do Espírito Santo
 - **Sigpesq**: Sistema de Gestão de Pesquisa (Research Management System)
-- **CDP**: Chrome DevTools Protocol
+- **CDP**: Chrome DevTools Protocol (managed via Playwright)
 - **MVC**: Model-View-Controller
 - **SOLID**: Single Responsibility, Open-Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
 

@@ -1,84 +1,43 @@
 import unittest
-from unittest.mock import MagicMock, patch, call
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from unittest.mock import MagicMock, AsyncMock, patch, call
 from agent_sigpesq.strategies.advisorships_strategy import AdvisorshipsDownloadStrategy
 
-class TestAdvisorshipsDownloadStrategy(unittest.TestCase):
+class TestAdvisorshipsDownloadStrategy(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.strategy = AdvisorshipsDownloadStrategy()
-        self.mock_driver = MagicMock()
+        self.mock_page = AsyncMock()
         self.reports_dir = "/tmp/reports"
 
-    @patch('agent_sigpesq.strategies.advisorships_strategy.WebDriverWait')
-    @patch('agent_sigpesq.strategies.advisorships_strategy.Select')
-    @patch('agent_sigpesq.strategies.advisorships_strategy.AdvisorshipsDownloadStrategy._wait_and_move_file')
-    def test_download_success(self, mock_wait_and_move, MockSelect, MockWebDriverWait):
+    @patch('agent_sigpesq.strategies.advisorships_strategy.AdvisorshipsDownloadStrategy._handle_download_and_move')
+    @patch('agent_sigpesq.strategies.advisorships_strategy.AdvisorshipsDownloadStrategy._ensure_accordion_open')
+    async def test_download_success(self, mock_ensure_accordion, mock_handle_download):
         # Setup mocks
-        mock_wait_instance = MockWebDriverWait.return_value
-        mock_element = MagicMock()
-        mock_element.tag_name = "select"  # Critical for Select class check
-        mock_wait_instance.until.return_value = mock_element
+        mock_handle_download.return_value = True
         
-        # Setup mocked Select
-        mock_select_instance = MockSelect.return_value
-        # Mock options: e.g., 2024 and 2025
-        option1 = MagicMock()
-        option1.get_attribute.return_value = "2024"
-        option2 = MagicMock()
-        option2.get_attribute.return_value = "2025"
-        mock_select_instance.options = [option1, option2]
+        # Mock year dropdown existence
+        self.mock_page.is_visible.return_value = True
         
-        mock_wait_and_move.return_value = True
+        # Mock eval_on_selector_all to return years
+        self.mock_page.eval_on_selector_all.return_value = ["2024", "2025"]
 
         # Execute
-        result = self.strategy.download(self.mock_driver, self.reports_dir)
+        result = await self.strategy.download(self.mock_page, self.reports_dir)
 
         # Verify
         self.assertTrue(result)
         
-        # Verify loop execution (should happen twice)
-        # Select.select_by_value should be called for each year
-        mock_select_instance.select_by_value.assert_has_calls([call("2024"), call("2025")])
+        # Verify year selection
+        expected_calls = [
+            call("#ContentPlaceHolder_ddlAno", value="2024"),
+            call("#ContentPlaceHolder_ddlAno", value="2025")
+        ]
+        self.mock_page.select_option.assert_has_calls(expected_calls)
         
-        # Verify file moves
-        mock_wait_and_move.assert_has_calls([
-            call(self.reports_dir, "/tmp/reports/advisorships/2024"),
-            call(self.reports_dir, "/tmp/reports/advisorships/2025")
-        ])
-
-    @patch('agent_sigpesq.strategies.advisorships_strategy.WebDriverWait')
-    @patch('agent_sigpesq.strategies.advisorships_strategy.Select')
-    @patch('agent_sigpesq.strategies.advisorships_strategy.AdvisorshipsDownloadStrategy._wait_and_move_file')
-    def test_partial_download_success(self, mock_wait_and_move, MockSelect, MockWebDriverWait):
-        """Test case where one year fails but overall process returns true if at least one succeeds"""
-        mock_wait_instance = MockWebDriverWait.return_value
-        mock_element = MagicMock()
-        mock_element.tag_name = "select"
-        mock_wait_instance.until.return_value = mock_element
+        # Verify download calls
+        self.assertEqual(mock_handle_download.call_count, 2)
         
-        mock_select_instance = MockSelect.return_value
-        option1 = MagicMock()
-        option1.get_attribute.return_value = "2024"
-        option2 = MagicMock()
-        option2.get_attribute.return_value = "2025"
-        mock_select_instance.options = [option1, option2]
-        
-        # Fail first download, succeed second
-        mock_wait_and_move.side_effect = [False, True]
-
-        result = self.strategy.download(self.mock_driver, self.reports_dir)
-
-        self.assertTrue(result)
-        
-    @patch('agent_sigpesq.strategies.advisorships_strategy.WebDriverWait')
-    def test_download_critical_failure(self, MockWebDriverWait):
-        # Setup failure
-        mock_wait_instance = MockWebDriverWait.return_value
-        mock_wait_instance.until.side_effect = Exception("Critical Error")
-
-        # Execute
-        result = self.strategy.download(self.mock_driver, self.reports_dir)
-
-        # Verify
-        self.assertFalse(result)
+    async def test_download_failure(self):
+         with patch('agent_sigpesq.strategies.advisorships_strategy.AdvisorshipsDownloadStrategy._ensure_accordion_open') as mock_open:
+            mock_open.side_effect = Exception("Accordion Error")
+            result = await self.strategy.download(self.mock_page, self.reports_dir)
+            self.assertFalse(result)

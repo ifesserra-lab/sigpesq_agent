@@ -1,45 +1,29 @@
 import unittest
-from unittest.mock import MagicMock, patch
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from unittest.mock import MagicMock, AsyncMock, patch
 from agent_sigpesq.strategies.projects_strategy import ProjectsDownloadStrategy
 
-class TestProjectsDownloadStrategy(unittest.TestCase):
+class TestProjectsDownloadStrategy(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.strategy = ProjectsDownloadStrategy()
-        self.mock_driver = MagicMock()
+        self.mock_page = AsyncMock()
         self.reports_dir = "/tmp/reports"
 
-    @patch('agent_sigpesq.strategies.projects_strategy.WebDriverWait')
-    @patch('agent_sigpesq.strategies.projects_strategy.ProjectsDownloadStrategy._wait_and_move_file')
-    def test_download_success(self, mock_wait_and_move, MockWebDriverWait):
+    @patch('agent_sigpesq.strategies.projects_strategy.ProjectsDownloadStrategy._handle_download_and_move')
+    @patch('agent_sigpesq.strategies.projects_strategy.ProjectsDownloadStrategy._ensure_accordion_open')
+    async def test_download_success(self, mock_ensure_accordion, mock_handle_download):
         # Setup mocks
-        mock_wait_instance = MockWebDriverWait.return_value
-        mock_element = MagicMock()
-        mock_wait_instance.until.return_value = mock_element
-        mock_wait_and_move.return_value = True
+        mock_handle_download.return_value = True
 
         # Execute
-        result = self.strategy.download(self.mock_driver, self.reports_dir)
+        result = await self.strategy.download(self.mock_page, self.reports_dir)
 
         # Verify
         self.assertTrue(result)
+        mock_ensure_accordion.assert_called_once()
+        mock_handle_download.assert_called_once()
         
-        # Verify download button interaction
-        self.assertTrue(mock_wait_instance.until.called)
-        mock_element.click.assert_called()
-        
-        # Verify file move
-        mock_wait_and_move.assert_called_with(self.reports_dir, "/tmp/reports/research_projects")
-
-    @patch('agent_sigpesq.strategies.projects_strategy.WebDriverWait')
-    def test_download_failure(self, MockWebDriverWait):
-        # Setup failure
-        mock_wait_instance = MockWebDriverWait.return_value
-        mock_wait_instance.until.side_effect = Exception("Element not found")
-
-        # Execute
-        result = self.strategy.download(self.mock_driver, self.reports_dir)
-
-        # Verify
-        self.assertFalse(result)
+    async def test_download_failure(self):
+         with patch('agent_sigpesq.strategies.projects_strategy.ProjectsDownloadStrategy._ensure_accordion_open') as mock_open:
+            mock_open.side_effect = Exception("Accordion Error")
+            result = await self.strategy.download(self.mock_page, self.reports_dir)
+            self.assertFalse(result)

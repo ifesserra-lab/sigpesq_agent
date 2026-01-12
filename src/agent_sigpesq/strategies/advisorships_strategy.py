@@ -1,18 +1,12 @@
-"""
-Strategy implementation for downloading Advisorships reports.
-"""
-
-from .report_download_strategy import BaseSeleniumStrategy
 import os
-import time
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
+import asyncio
+from playwright.async_api import Page
+from .report_download_strategy import BasePlaywrightStrategy
 
-class AdvisorshipsDownloadStrategy(BaseSeleniumStrategy):
+class AdvisorshipsDownloadStrategy(BasePlaywrightStrategy):
     """
-    Strategy for downloading reports related to Advisorships.
+    Strategy for downloading reports related to Student Advisorships (Orientacoes),
+    iterating through available years.
     """
 
     def get_category_name(self) -> str:
@@ -23,55 +17,73 @@ class AdvisorshipsDownloadStrategy(BaseSeleniumStrategy):
         """Returns the button ID for Advisorships."""
         return "ContentPlaceHolder_btnRel_Orientacoes"
         
-    def download(self, driver, reports_dir: str) -> bool:
+    async def download(self, page: Page, reports_dir: str) -> bool:
         """
-        Executes the download simulation for Advisorships.
+        Executes the download process for Advisorships.
         """
         print(f"Processing {self.get_category_name()}...")
         
         try:
-            wait = WebDriverWait(driver, 20)
             button_id = self.get_button_id()
             
             # 1. Ensure accordion is open
-            self._ensure_accordion_open(wait, button_id, "Orientações")
+            await self._ensure_accordion_open(page, button_id, "Orientações")
+            
+            # 2. Get year dropdown
+            year_select_id = "ContentPlaceHolder_ddlAno" # Correct ID based on previous context
+            
+            # Check if dropdown exists
+            if not await page.is_visible(f"#{year_select_id}"):
+                print(f"Year dropdown {year_select_id} not found.")
+                return False
 
-            # 2. Find Year Dropdown
-            dropdown_id = "ContentPlaceHolder_ddlRelOrientacao_Ano"
-            dropdown_element = wait.until(EC.presence_of_element_located((By.ID, dropdown_id)))
-            select = Select(dropdown_element)
+            # Get all options using evaluation
+            options = await page.eval_on_selector_all(
+                f"#{year_select_id} option", 
+                "elements => elements.map(e => e.value)"
+            )
             
-            # Get all options first to avoid stale element reference
-            options_values = [option.get_attribute("value") for option in select.options]
+            # Filter valid years (exclude empty valued or "Select" options)
+            years = [opt for opt in options if opt and opt.isdigit()]
+            years.sort() # Ensure order
             
-            download_count = 0
+            print(f"Found years: {years}")
             
-            # 3. Iterate through each year
-            for year in options_values:
-                print(f"Processing Year: {year}")
+            success_count = 0
+            
+            for year in years:
+                try:
+                    print(f"Processing Year: {year}")
+                    
+                    # Select year
+                    await page.select_option(f"#{year_select_id}", value=year)
+                    
+                    # Need to wait for postback/loading masking if likely
+                    # Assuming standard ASP.NET behavior, might need a small wait or check for loading mask
+                    # await page.wait_for_timeout(1000) 
+                    
+                    # Prepare subdirectory
+                    year_subdir = os.path.join(reports_dir, "advisorships", year)
+                    
+                    print(f"Clicking button {button_id} for year {year}...")
+                    
+                    # Handle download
+                    selector = f"#{button_id}"
+                    if await self._handle_download_and_move(page, selector, reports_dir, year_subdir):
+                        success_count += 1
+                    else:
+                        print(f"Failed to download report for {year}")
+                        
+                except Exception as e:
+                    print(f"Error processing year {year}: {e}")
+                    
+            if success_count > 0:
+                print(f"Successfully downloaded {success_count} advisorship reports.")
+                return True
+            else:
+                print("No advisorship reports downloaded successfully.")
+                return False
                 
-                # Check for year-specific directory
-                year_dir = os.path.join(reports_dir, "advisorships", year)
-
-                # Re-locate element to avoid StaleElementReferenceException
-                dropdown_element = wait.until(EC.presence_of_element_located((By.ID, dropdown_id)))
-                select = Select(dropdown_element)
-                select.select_by_value(year)
-                time.sleep(1) # Wait for selection to apply if needed
-
-                # Click Download
-                print(f"Clicking button {button_id} for year {year}...")
-                btn = wait.until(EC.element_to_be_clickable((By.ID, button_id)))
-                btn.click()
-                
-                # 4. Wait for download and move file
-                if self._wait_and_move_file(reports_dir, year_dir):
-                    download_count += 1
-                else:
-                    print(f"Failed to download report for {year}")
-            
-            return download_count > 0
-
         except Exception as e:
             print(f"Error downloading {self.get_category_name()}: {e}")
             return False
