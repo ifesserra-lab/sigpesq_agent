@@ -31,6 +31,15 @@ The system automates the login process and downloads three categories of researc
 - System verifies successful login before proceeding
 - System provides error messages for failed authentication
 
+#### FR-1.1: CLI Strategy Selection
+**Priority**: Medium
+**Description**: The system shall provide CLI commands to execute specific download strategies individually (Groups, Projects, Advisorships).
+
+**Acceptance Criteria**:
+- System accepts command line arguments to select strategy
+- System supports `download-groups`, `download-projects`, `download-advisorships` commands
+- System supports default `download-all` behavior
+
 #### FR-2: Research Groups Report Download
 **Priority**: High  
 **Description**: The system shall download the "Grupos de Pesquisa" (Research Groups) report.
