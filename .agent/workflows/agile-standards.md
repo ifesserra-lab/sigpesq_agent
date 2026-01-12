@@ -89,7 +89,7 @@ Maintain the following artifacts throughout the lifecycle:
 
 ## 9. Definition of Done (DoD)
 - [ ] **Verification**:
-    - [ ] Test suite passing.
+    - [ ] Test suite passing. **MANDATORY AND NON-NEGOTIABLE**.
     - [ ] Linting checks passing.
 - [ ] **Documentation**:
     - [ ] Update Google-style docstrings.
@@ -109,4 +109,13 @@ Maintain the following artifacts throughout the lifecycle:
         - Managing Branches (Remote).
         - Releases.
     - [ ] **AVOID** `git` CLI commands where MCP alternatives exist.
-    - [ ] **Legacy Git**: Use `git` CLI only for local workspace synchronization (checkout/pull) if MCP equivalent is unavailable.
+## 11. Senior CI/CD/QA Role
+- **Responsibility**: Monitor GitHub Actions for all branches, especially `developing` and `main`.
+- **Process**:
+    - [ ] If a GitHub Action failure is detected:
+        - [ ] Create a new GitHub Issue with the label `bug` and type `bugfix`.
+        - [ ] Reference the failed Run ID and Branch in the issue.
+        - [ ] Assign the issue to the current agent.
+        - [ ] Switch to a `fix/` branch to resolve the issue.
+        - [ ] Verify the fix locally and push to trigger a new CI Run.
+        - [ ] Once passed, close the issue and merge the PR.
