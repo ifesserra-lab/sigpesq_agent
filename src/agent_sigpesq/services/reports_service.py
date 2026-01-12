@@ -46,13 +46,15 @@ class SigpesqReportService(BaseAgent[None, bool]):
         strategies (List[ReportDownloadStrategy]): List of download strategies to execute.
     """
 
-    def __init__(self, headless: bool = True, download_dir: str = "reports"):
+    def __init__(self, headless: bool = True, download_dir: str = "reports", strategies: List[ReportDownloadStrategy] = None):
         """
         Initializes the SigpesqReportService.
 
         Args:
             headless (bool): Whether to run the browser in headless mode. Defaults to True.
             download_dir (str): Directory where reports will be saved. Defaults to "reports".
+            strategies (List[ReportDownloadStrategy], optional): List of specific strategies to execute. 
+                                                                 If None, executes all default strategies.
         """
         self.username = os.getenv("SIGPESQ_USER")
         self.password = os.getenv("SIGPESQ_PASSWORD")
@@ -62,8 +64,11 @@ class SigpesqReportService(BaseAgent[None, bool]):
         self.download_dir = download_dir
         self.driver = None
         
-        # Initialize strategies in the order requested by user
-        self.strategies: List[ReportDownloadStrategy] = [
+        # Initialize strategies
+        if strategies:
+            self.strategies = strategies
+        else:
+            self.strategies = [
             ResearchGroupsDownloadStrategy(),
             ProjectsDownloadStrategy(),
             AdvisorshipsDownloadStrategy()

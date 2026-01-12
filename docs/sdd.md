@@ -32,6 +32,13 @@ The system follows a modular architecture based on MVC and SOLID principles.
 - Credentials are read from environment variables (.env).
 - Reports are saved to a local `reports/` folder.
 
+### 3.4 CLI Design
+The `agent.py` entry point will be refactored to use `argparse` to support subcommands:
+- `download-all`: Executes all configured strategies (default).
+- `download-groups`: Executes only `ResearchGroupsDownloadStrategy`.
+- `download-projects`: Executes only `ProjectsDownloadStrategy`.
+- `download-advisorships`: Executes only `AdvisorshipsDownloadStrategy`.
+
 ## 4. User Interface Design
 Automated interaction via Selenium. The report service will navigate to the reports list and click expansion/download buttons sequentially.
 
