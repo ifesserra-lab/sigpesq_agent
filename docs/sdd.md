@@ -47,3 +47,9 @@ Automated interaction via Selenium. The report service will navigate to the repo
 - **Strategy/Template Method**: Used in BaseAgent.
 - **SOLID**: Single Responsibility (ReportService focuses on document generation).
 - **Factory**: BrowserFactory for WebDriver configuration.
+
+## 6. Test Strategy
+Unit tests will be implemented for each strategy using `unittest.mock` to simulate `selenium.webdriver` behavior.
+- **Mocking**: `WebDriver`, `WebElement`, `WebDriverWait`.
+- **Scope**: Verify that `download()` calls expected driver methods (find_element, click, execute_script).
+
