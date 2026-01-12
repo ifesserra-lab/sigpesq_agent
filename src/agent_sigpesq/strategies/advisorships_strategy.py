@@ -30,7 +30,7 @@ class AdvisorshipsDownloadStrategy(BasePlaywrightStrategy):
             await self._ensure_accordion_open(page, button_id, "Orientações")
             
             # 2. Get year dropdown
-            year_select_id = "ContentPlaceHolder_ddlAno" # Correct ID based on previous context
+            year_select_id = "ContentPlaceHolder_ddlRelOrientacao_Ano"
             
             # Check if dropdown exists
             if not await page.is_visible(f"#{year_select_id}"):
