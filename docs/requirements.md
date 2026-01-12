@@ -133,6 +133,7 @@ The system automates the login process and downloads three categories of researc
 - Factory Pattern for object creation
 - Clear separation of concerns (MVC)
 - Comprehensive documentation (IEEE SDD)
+- **Test Coverage**: Each strategy execution flow must be covered by unit tests mocking the WebDriver.
 
 #### NFR-4: Usability
 **Priority**: Medium  
