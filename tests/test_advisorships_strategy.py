@@ -28,8 +28,8 @@ class TestAdvisorshipsDownloadStrategy(unittest.IsolatedAsyncioTestCase):
         
         # Verify year selection
         expected_calls = [
-            call("#ContentPlaceHolder_ddlAno", value="2024"),
-            call("#ContentPlaceHolder_ddlAno", value="2025")
+            call("#ContentPlaceHolder_ddlRelOrientacao_Ano", value="2024"),
+            call("#ContentPlaceHolder_ddlRelOrientacao_Ano", value="2025")
         ]
         self.mock_page.select_option.assert_has_calls(expected_calls)
         
