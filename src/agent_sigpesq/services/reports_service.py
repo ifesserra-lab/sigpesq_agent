@@ -83,13 +83,13 @@ class SigpesqReportService:
         print("Entering credentials...")
         try:
              # Wait for input to be ready
-            await page.wait_for_selector("#ContentPlaceHolder_txtCpf", state="visible")
+            await page.wait_for_selector("#txtLogin", state="visible")
             
-            await page.fill("#ContentPlaceHolder_txtCpf", self.username)
-            await page.fill("#ContentPlaceHolder_txtSenha", self.password)
+            await page.fill("#txtLogin", self.username)
+            await page.fill("#txtSenha", self.password)
             
             print("Clicking login...")
-            await page.click("#ContentPlaceHolder_btnConfirmar")
+            await page.click("#btnLogin")
             
             # Wait for navigation or check for success/failure
             # Login successful usually redirects to Default.aspx or similar, or shows user info
@@ -97,7 +97,7 @@ class SigpesqReportService:
             
             try:
                  # Check for success (URL change)
-                await page.wait_for_url("**/web/**", timeout=5000)
+                await page.wait_for_url("**/web/**", timeout=10000)
                 print("Login successful!")
                 return True
             except:
