@@ -1,4 +1,3 @@
-selenium
+playwright
 python-dotenv
 pydantic
-webdriver-manager
