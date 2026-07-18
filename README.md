@@ -1,14 +1,43 @@
 # Sigpesq Agent
 
-Automated agent for downloading reports from the Sigpesq portal (IFES) using Playwright and Python.
+Automated agent that logs into the Sigpesq portal (IFES) with **Playwright**, downloads
+research data, and turns project PDFs into structured JSON with the **Mistral API**.
 
 ## 📋 Objective
 
-This agent performs automatic login to the Sigpesq portal and downloads research reports in three categories:
+With a **single login** (the portal rate-limits logins), the agent runs three stages:
 
-- **Research Groups** → `reports/research_groups/`
-- **Research Projects** → `reports/projects/`
-- **Advisorships** → `reports/advisorships/{year}/` (one file per year, from 2016 to 2025)
+1. **Report ETL (Excel)** — downloads the three report categories:
+   - **Research Groups** → `reports/research_group/`
+   - **Research Projects** → `reports/research_projects/`
+   - **Advisorships** → `reports/advisorships/{year}/` (one file per year)
+2. **Per-project PDF ETL** — the **"Projeto"** PDF of every campus project
+   (Diretoria → Projetos → do Campus) → `reports/project_files/<code>.pdf`
+3. **Extraction (Mistral)** — each PDF → structured JSON
+   → `reports/project_files_json/<code>.json` (+ combined `projects.json`)
+
+### Pipeline
+
+```mermaid
+flowchart LR
+    L[Login • single session] --> R[Report ETL<br/>Excel reports]
+    L --> P[Per-project PDF ETL<br/>listaUnidade → Resumo modal → 'Projeto' PDF]
+    P --> X[Mistral extraction<br/>OCR → LLM JSON mode]
+    R --> FS[(reports/)]
+    P --> FS
+    X --> JS[(reports/project_files_json/)]
+```
+
+### Quickstart
+
+```bash
+pip install -e ".[extract]"           # agent + mistralai
+playwright install chromium           # browser
+cp .env.example .env                  # fill SIGPESQ_USER / SIGPESQ_PASSWORD / MISTRAL_KEY
+
+python agent.py download-everything    # stages 1 + 2, one login
+python examples/extract_projects.py    # stage 3 (PDF → JSON)
+```
 
 ## 🛠️ Technologies
 
@@ -23,7 +52,9 @@ This agent performs automatic login to the Sigpesq portal and downloads research
 - **Documentation**: IEEE 1016 SDD (Software Design Description)
 
 > [!NOTE]
-> This library is designed strictly for **downloading files** from the Sigpesq portal. It **does not** interact with or save data to any database. All outputs are saved as files in the local filesystem.
+> This library **downloads files** from the Sigpesq portal and **extracts JSON** from the
+> project PDFs. It **does not** interact with or save data to any database — all outputs
+> (Excel reports, PDFs, JSON) are written to the local filesystem under `reports/`.
 
 ## 🏗️ Architecture
 
