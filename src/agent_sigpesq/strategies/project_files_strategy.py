@@ -77,7 +77,10 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
             return False
 
         total, ok, done = await self._read_total(page), 0, 0
-        print(f"Total projects reported by portal: {total or 'unknown'}")
+        # total pages = ceil(total / rows_per_page); the portal shows 10 rows/page
+        max_pages = (total + 9) // 10 if total else None
+        print(f"Total projects reported by portal: {total or 'unknown'}"
+              + (f" ({max_pages} pages)" if max_pages else ""))
 
         page_num = 1
         while True:
@@ -98,7 +101,9 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
                     ok += 1
                 # after Fechar the grid is re-rendered on the same page; continue
 
-            # advance to next grid page, if any
+            # advance to next grid page, if any (bounded by the total page count)
+            if max_pages is not None and page_num >= max_pages:
+                break
             if not await self._go_to_page(page, page_num + 1):
                 break
             page_num += 1
@@ -160,13 +165,17 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
             pass
 
     async def _go_to_page(self, page: Page, n: int) -> bool:
-        """Click the grid pager for page n. Returns False if that page link is absent."""
-        # pager links live in the .gvwPager row; match the exact page-number text
-        link = page.locator(".gvwPager a").filter(has_text=re.compile(rf"^\s*{n}\s*$")).first
-        if await link.count() == 0:
-            return False
+        """Go to grid page n via the GridView postback.
+
+        The portal's pager is windowed (it only renders a handful of page numbers
+        plus 'Last'), so clicking a numbered link fails past the window. The
+        GridView accepts a 'Page$N' command for any N, so we invoke the postback
+        directly instead of relying on a visible link.
+        """
         try:
-            await link.click()
+            await page.evaluate(
+                "(n) => __doPostBack('ctl00$ContentPlaceHolder$gvwLista', 'Page$' + n)", n
+            )
             await page.wait_for_load_state("networkidle")
             await page.wait_for_selector(GRID, timeout=15000)
             return True
