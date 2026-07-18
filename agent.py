@@ -5,7 +5,8 @@ from agent_sigpesq.services.reports_service import SigpesqReportService
 from agent_sigpesq.strategies import (
     ResearchGroupsDownloadStrategy,
     ProjectsDownloadStrategy,
-    AdvisorshipsDownloadStrategy
+    AdvisorshipsDownloadStrategy,
+    ProjectFilesDownloadStrategy
 )
 
 async def main():
@@ -17,6 +18,18 @@ async def main():
     subparsers.add_parser("download-groups", help="Download only Research Groups reports")
     subparsers.add_parser("download-projects", help="Download only Research Projects reports")
     subparsers.add_parser("download-advisorships", help="Download only Advisorships reports")
+    pf = subparsers.add_parser(
+        "download-project-files",
+        help="Download the 'Projeto' PDF of each campus project (Diretoria -> Projetos -> do Campus)"
+    )
+    pf.add_argument("--limit", type=int, default=None,
+                    help="Max number of projects to process (default: all)")
+    ev = subparsers.add_parser(
+        "download-everything",
+        help="Run BOTH ETLs in a SINGLE login: report files (Excel) + per-project PDFs"
+    )
+    ev.add_argument("--limit", type=int, default=None,
+                    help="Max number of projects for the PDF ETL (default: all)")
 
     args = parser.parse_args()
 
@@ -30,6 +43,18 @@ async def main():
     elif args.command == "download-advisorships":
         strategies = [AdvisorshipsDownloadStrategy()]
         print("Configuration: Downloading Advisorships only.")
+    elif args.command == "download-project-files":
+        strategies = [ProjectFilesDownloadStrategy(limit=args.limit)]
+        print(f"Configuration: Downloading per-project PDF files (limit={args.limit}).")
+    elif args.command == "download-everything":
+        # Both ETLs, one login. project-files LAST: it navigates away from the reports page.
+        strategies = [
+            ResearchGroupsDownloadStrategy(),
+            ProjectsDownloadStrategy(),
+            AdvisorshipsDownloadStrategy(),
+            ProjectFilesDownloadStrategy(limit=args.limit),
+        ]
+        print(f"Configuration: Running BOTH ETLs (reports + PDFs) in one login (limit={args.limit}).")
     else:
         print("Configuration: Downloading ALL reports.")
 
