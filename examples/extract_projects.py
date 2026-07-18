@@ -73,7 +73,9 @@ def main() -> int:
 
     # rebuild the combined array from ALL per-project JSON files on disk
     combined = []
-    for jf in sorted(glob.glob(os.path.join(args.out_dir, "PJ_*.json"))):
+    for jf in sorted(glob.glob(os.path.join(args.out_dir, "*.json"))):
+        if os.path.basename(jf) == "projects.json":
+            continue
         with open(jf, encoding="utf-8") as f:
             combined.append(json.load(f))
     with open(os.path.join(args.out_dir, "projects.json"), "w", encoding="utf-8") as f:

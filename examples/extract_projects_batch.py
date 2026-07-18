@@ -90,7 +90,9 @@ def main() -> int:
 
 def _rebuild_combined(out_dir: str) -> int:
     combined = []
-    for jf in sorted(glob.glob(os.path.join(out_dir, "PJ_*.json"))):
+    for jf in sorted(glob.glob(os.path.join(out_dir, "*.json"))):
+        if os.path.basename(jf) == "projects.json":
+            continue
         with open(jf, encoding="utf-8") as f:
             combined.append(json.load(f))
     if combined:
