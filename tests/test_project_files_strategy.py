@@ -97,6 +97,25 @@ class TestProjectFilesDownloadStrategy(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(m_one.call_count, 3)
         m_go.assert_not_called()  # limit hit before advancing pages
 
+    @patch.object(ProjectFilesDownloadStrategy, "_go_to_page", new_callable=AsyncMock)
+    @patch.object(ProjectFilesDownloadStrategy, "_download_one", new_callable=AsyncMock)
+    @patch.object(ProjectFilesDownloadStrategy, "_row_code", new_callable=AsyncMock)
+    @patch.object(ProjectFilesDownloadStrategy, "_read_total", new_callable=AsyncMock)
+    async def test_skips_existing_files(self, m_total, m_code, m_one, m_go):
+        m_total.return_value = 1
+        m_code.return_value = "PJ 1"
+        m_go.return_value = False
+        self.page.locator = MagicMock(return_value=_locator(count=1))
+        # pre-create the PDF so the project is treated as already downloaded
+        sub = os.path.join(self.reports_dir, "project_files")
+        os.makedirs(sub, exist_ok=True)
+        open(os.path.join(sub, "PJ_1.pdf"), "w").close()
+
+        result = await self.strategy.download(self.page, self.reports_dir)
+
+        self.assertTrue(result)
+        m_one.assert_not_called()  # existing file -> no modal/download
+
     async def test_download_returns_false_when_list_unavailable(self):
         self.page.goto = AsyncMock(side_effect=Exception("boom"))
         result = await self.strategy.download(self.page, self.reports_dir)

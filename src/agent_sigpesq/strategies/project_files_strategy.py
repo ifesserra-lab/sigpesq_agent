@@ -46,15 +46,19 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
     Resumo modal, iterating all grid pages. Single login (reuses the page).
     """
 
-    def __init__(self, limit: int | None = None, file_label: str = "Projeto"):
+    def __init__(self, limit: int | None = None, file_label: str = "Projeto",
+                 skip_existing: bool = True):
         """
         Args:
             limit: max number of projects to process (None = all). Handy for testing.
             file_label: the link text inside the Arquivos table to download
                         ("Projeto" = the main project PDF).
+            skip_existing: if True, projects whose PDF is already on disk are skipped
+                           (makes a re-run resumable, e.g. after a mid-run stop).
         """
         self.limit = limit
         self.file_label = file_label
+        self.skip_existing = skip_existing
 
     def get_category_name(self) -> str:
         return "Research Project Files"
@@ -97,6 +101,11 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
                     return ok > 0
                 done += 1
                 code = await self._row_code(page, i)
+                # resumable: skip projects whose PDF is already on disk
+                if self.skip_existing and os.path.exists(
+                        os.path.join(target_subdir, f"{_safe_name(code)}.pdf")):
+                    ok += 1
+                    continue
                 if await self._download_one(page, i, code, target_subdir):
                     ok += 1
                 # after Fechar the grid is re-rendered on the same page; continue
@@ -104,6 +113,16 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
             # advance to next grid page, if any (bounded by the total page count)
             if max_pages is not None and page_num >= max_pages:
                 break
+            # let the last modal-close postback settle (pager back on page_num) so the
+            # next click isn't issued against a still-updating grid
+            try:
+                await page.wait_for_function(
+                    "(n) => { const s = document.querySelector('.gvwPager span');"
+                    " return !!s && s.textContent.trim() === String(n); }",
+                    arg=page_num, timeout=10000,
+                )
+            except Exception:
+                pass
             if not await self._go_to_page(page, page_num + 1):
                 break
             page_num += 1
@@ -165,23 +184,37 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
             pass
 
     async def _go_to_page(self, page: Page, n: int) -> bool:
-        """Go to grid page n via the GridView postback.
+        """Go to grid page n by clicking its pager link, matched by postback href.
 
-        The portal's pager is windowed (it only renders a handful of page numbers
-        plus 'Last'), so clicking a numbered link fails past the window. The
-        GridView accepts a 'Page$N' command for any N, so we invoke the postback
-        directly instead of relying on a visible link.
+        The pager is windowed: it renders a block of numbers plus a '...' forward
+        link and 'Último'. Matching by visible text misses the '...' link at block
+        boundaries, so we match by the postback target in the href ('Page$N'),
+        which also covers '...'. Navigating sequentially, a link for page N always
+        exists (a numeric one inside the block, or '...' at the boundary).
         """
-        try:
-            await page.evaluate(
-                "(n) => __doPostBack('ctl00$ContentPlaceHolder$gvwLista', 'Page$' + n)", n
-            )
-            await page.wait_for_load_state("networkidle")
-            await page.wait_for_selector(GRID, timeout=15000)
-            return True
-        except Exception as e:
-            print(f"Could not go to grid page {n}: {e}")
-            return False
+        selector = f".gvwPager a[href*=\"Page${n}'\"]"
+        # A modal-close postback from the previous page can still be in flight, so a
+        # click can land on a half-rendered/empty grid. Retry the whole click, and
+        # only accept it once the pager shows page n AND the grid has project rows.
+        landed = (
+            "(n) => { const s = document.querySelector('.gvwPager span');"
+            " const rows = document.querySelectorAll("
+            "\"#ContentPlaceHolder_gvwLista a[id*='btnResumoProjeto']\").length;"
+            " return !!s && s.textContent.trim() === String(n) && rows > 0; }"
+        )
+        for _attempt in range(4):
+            link = page.locator(selector).first
+            if await link.count() == 0:
+                await page.wait_for_timeout(1000)  # pager may still be rendering
+                continue
+            try:
+                await link.click()
+                await page.wait_for_function(landed, arg=n, timeout=15000)
+                return True
+            except Exception:
+                await page.wait_for_timeout(1000)  # empty/half-rendered -> retry click
+        print(f"Could not load rows for grid page {n} after retries.")
+        return False
 
     async def _row_code(self, page: Page, i: int) -> str:
         """Read the project code (e.g. 'PJ 9760') from row i for use as the filename."""
