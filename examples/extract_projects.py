@@ -34,6 +34,8 @@ def main() -> int:
     p.add_argument("--pdf-dir", default="reports/project_files", help="Folder with project PDFs.")
     p.add_argument("--out-dir", default="reports/project_files_json", help="Output folder for JSON.")
     p.add_argument("--limit", type=int, default=None, help="Max PDFs to process (default: all).")
+    p.add_argument("--force", action="store_true",
+                   help="Re-extract even if the JSON already exists (default: skip existing).")
     args = p.parse_args()
 
     pdfs = sorted(glob.glob(os.path.join(args.pdf_dir, "*.pdf")))
@@ -46,10 +48,15 @@ def main() -> int:
     os.makedirs(args.out_dir, exist_ok=True)
     extractor = ProjectExtractor()
 
-    combined = []
-    ok = 0
+    ok = skipped = 0
     for i, pdf in enumerate(pdfs, 1):
         name = os.path.basename(pdf)
+        stem = os.path.splitext(name)[0]
+        out_path = os.path.join(args.out_dir, f"{stem}.json")
+        # resumable: skip PDFs already extracted unless --force
+        if not args.force and os.path.exists(out_path):
+            skipped += 1
+            continue
         print(f"[{i}/{len(pdfs)}] {name} ...", flush=True)
         try:
             projeto = extractor.extract_project(pdf)
@@ -57,20 +64,24 @@ def main() -> int:
             print(f"    FAILED: {e}")
             continue
         data = projeto.model_dump(by_alias=True)
-        stem = os.path.splitext(name)[0]
-        with open(os.path.join(args.out_dir, f"{stem}.json"), "w", encoding="utf-8") as f:
+        with open(out_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        combined.append(data)
         ok += 1
         missing = data["_meta"]["campos_ausentes"]
         print(f"    OK -> {stem}.json"
               + (f"  (campos ausentes: {', '.join(missing)})" if missing else ""))
 
+    # rebuild the combined array from ALL per-project JSON files on disk
+    combined = []
+    for jf in sorted(glob.glob(os.path.join(args.out_dir, "PJ_*.json"))):
+        with open(jf, encoding="utf-8") as f:
+            combined.append(json.load(f))
     with open(os.path.join(args.out_dir, "projects.json"), "w", encoding="utf-8") as f:
         json.dump(combined, f, ensure_ascii=False, indent=2)
 
-    print(f"\nDone: {ok}/{len(pdfs)} extracted -> {args.out_dir}/ (+ projects.json)")
-    return 0 if ok > 0 else 1
+    print(f"\nDone: {ok} extracted, {skipped} skipped (already done), "
+          f"{len(combined)} in projects.json -> {args.out_dir}/")
+    return 0 if (ok > 0 or skipped > 0) else 1
 
 
 if __name__ == "__main__":
