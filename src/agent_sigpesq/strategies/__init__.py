@@ -9,10 +9,12 @@ from .report_download_strategy import ReportDownloadStrategy
 from .research_groups_strategy import ResearchGroupsDownloadStrategy
 from .projects_strategy import ProjectsDownloadStrategy
 from .advisorships_strategy import AdvisorshipsDownloadStrategy
+from .project_files_strategy import ProjectFilesDownloadStrategy
 
 __all__ = [
     "ReportDownloadStrategy",
     "ResearchGroupsDownloadStrategy",
     "ProjectsDownloadStrategy",
     "AdvisorshipsDownloadStrategy",
+    "ProjectFilesDownloadStrategy",
 ]
