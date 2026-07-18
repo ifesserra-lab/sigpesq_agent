@@ -8,7 +8,8 @@ the same authenticated session (the portal rate-limits logins).
 | [`run_reports_etl.py`](run_reports_etl.py) | ETL 1 — report files (Excel): groups, projects, advisorships | `reports/research_group/`, `reports/research_projects/`, `reports/advisorships/<year>/` |
 | [`run_pdf_etl.py`](run_pdf_etl.py) | ETL 2 — the "Projeto" PDF of every campus project | `reports/project_files/<code>.pdf` |
 | [`run_all_etls.py`](run_all_etls.py) | **Both** ETLs in a single login | all of the above |
-| [`extract_projects.py`](extract_projects.py) | PDF → JSON via Mistral (OCR + LLM) | `reports/project_files_json/<code>.json` + `projects.json` |
+| [`extract_projects.py`](extract_projects.py) | PDF → JSON via Mistral (text-first, OCR fallback) | `reports/project_files_json/<code>.json` + `projects.json` |
+| [`extract_projects_batch.py`](extract_projects_batch.py) | Bulk PDF → JSON via Mistral **Batch API** (~50% cost, async) | same as above |
 
 ## Setup
 

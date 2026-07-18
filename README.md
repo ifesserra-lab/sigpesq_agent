@@ -282,9 +282,22 @@ pip install -e ".[extract]"      # installs mistralai (pinned <2)
 ### Run
 
 ```bash
-python examples/extract_projects.py --limit 5     # test with 5 PDFs
-python examples/extract_projects.py               # all downloaded PDFs
+python examples/extract_projects.py --limit 5     # test with 5 PDFs (synchronous)
+python examples/extract_projects.py               # all downloaded PDFs (synchronous)
 ```
+
+Both examples are **resumable** (skip PDFs whose JSON already exists; `--force` to redo).
+
+**Bulk / cheaper — Mistral Batch API (~50% cost, async):**
+
+```bash
+python examples/extract_projects_batch.py         # batch all not-yet-extracted
+python examples/extract_projects_batch.py --job JOB_ID   # resume: collect a submitted job
+```
+
+The batch path prepares requests from **local pdf text only** (no API calls during
+prep) and runs the chat calls inside a discounted async job. Scanned PDFs (no embedded
+text) are skipped there — run the synchronous `extract_projects.py` for those.
 
 Outputs (filename follows the project code, matching each PDF):
 

@@ -9,11 +9,14 @@ without pulling in the optional `mistralai` dependency.
 """
 from .schema import Projeto
 
-__all__ = ["Projeto", "ProjectExtractor"]
+__all__ = ["Projeto", "ProjectExtractor", "BatchProjectExtractor"]
 
 
 def __getattr__(name):
     if name == "ProjectExtractor":
         from .mistral_extractor import ProjectExtractor
         return ProjectExtractor
+    if name == "BatchProjectExtractor":
+        from .batch_extractor import BatchProjectExtractor
+        return BatchProjectExtractor
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

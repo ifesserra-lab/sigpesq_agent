@@ -116,39 +116,42 @@ class ProjectExtractor:
         markdown = "\n\n".join((pg.markdown or "") for pg in pages)
         return markdown, len(pages)
 
-    # --- step 2: structured extraction via chat (JSON mode) ---
-    def extract_fields(self, codigo: str, markdown: str) -> dict:
-        text = markdown[:MAX_MARKDOWN_CHARS]
+    # --- prompt shared by the sync and batch paths ---
+    def build_messages(self, codigo: str, text: str) -> list:
+        """Build the chat messages for one project's structured extraction."""
         user_prompt = (
             f"Código do projeto (use exatamente este valor em 'codigo'): {codigo}\n\n"
             f"Formato JSON esperado (modelo das chaves):\n"
             f"{json.dumps(JSON_TEMPLATE, ensure_ascii=False, indent=2)}\n\n"
-            f"Texto do PDF do projeto (markdown do OCR):\n\"\"\"\n{text}\n\"\"\""
+            f"Texto do PDF do projeto:\n\"\"\"\n{text[:MAX_MARKDOWN_CHARS]}\n\"\"\""
         )
+        return [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    # --- text source: local first, OCR fallback ---
+    def text_for(self, pdf_path: str) -> Tuple[str, int, str]:
+        """Return (text, num_pages, source) using embedded text when possible."""
+        text, num_pages = self.pdf_text(pdf_path)
+        if len(text.strip()) >= MIN_PDF_TEXT_CHARS:
+            return text, num_pages, "pdf-text"
+        text, num_pages = self.ocr_pdf(pdf_path)
+        return text, num_pages, "ocr"
+
+    # --- step 2: structured extraction via chat (JSON mode) ---
+    def extract_fields(self, codigo: str, text: str) -> dict:
         resp = self.client.chat.complete(
             model=self.chat_model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages=self.build_messages(codigo, text),
             response_format={"type": "json_object"},
             temperature=0,
         )
         return json.loads(resp.choices[0].message.content)
 
-    # --- full pipeline for one PDF ---
-    def extract_project(self, pdf_path: str) -> Projeto:
-        codigo = _codigo_from_filename(pdf_path)
-        # cheap path first: use embedded text (no OCR call) when the PDF is digital;
-        # fall back to OCR only for scanned PDFs with little/no extractable text.
-        text, num_pages = self.pdf_text(pdf_path)
-        if len(text.strip()) >= MIN_PDF_TEXT_CHARS:
-            source = "pdf-text"
-        else:
-            text, num_pages = self.ocr_pdf(pdf_path)
-            source = "ocr"
-        raw = self.extract_fields(codigo, text)
-
+    # --- post-process a raw extraction dict into a validated Projeto ---
+    def finalize(self, codigo: str, raw: dict, arquivo: str,
+                 num_pages: int, source: str) -> Projeto:
         raw["codigo"] = codigo  # filename is authoritative
         # Defensive: 'equipe' must be real people. Drop entries without a name
         # (usually mis-classified work-plan/task titles) -> they belong to cronograma.
@@ -159,7 +162,7 @@ class ProjectExtractor:
                 if isinstance(m, dict) and (m.get("nome") or "").strip()
             ]
         raw["_meta"] = {
-            "arquivo": os.path.basename(pdf_path),
+            "arquivo": arquivo,
             "paginas": num_pages,
             "extraido_em": datetime.now(timezone.utc).isoformat(),
             "modelo": self.chat_model,
@@ -169,3 +172,10 @@ class ProjectExtractor:
         projeto = Projeto.model_validate(raw)
         projeto.meta.campos_ausentes = _missing_fields(projeto)
         return projeto
+
+    # --- full synchronous pipeline for one PDF ---
+    def extract_project(self, pdf_path: str) -> Projeto:
+        codigo = _codigo_from_filename(pdf_path)
+        text, num_pages, source = self.text_for(pdf_path)
+        raw = self.extract_fields(codigo, text)
+        return self.finalize(codigo, raw, os.path.basename(pdf_path), num_pages, source)
