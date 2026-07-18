@@ -100,7 +100,7 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
                     print(f"Reached limit={self.limit}; stopping.")
                     return ok > 0
                 done += 1
-                code = await self._row_code(page, i)
+                code = await self._row_code(page, i, page_num)
                 # resumable: skip projects whose PDF is already on disk
                 if self.skip_existing and os.path.exists(
                         os.path.join(target_subdir, f"{_safe_name(code)}.pdf")):
@@ -216,8 +216,12 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
         print(f"Could not load rows for grid page {n} after retries.")
         return False
 
-    async def _row_code(self, page: Page, i: int) -> str:
-        """Read the project code (e.g. 'PJ 9760') from row i for use as the filename."""
+    async def _row_code(self, page: Page, i: int, page_num: int = 0) -> str:
+        """Read the project code (e.g. 'PJ 9760') from row i for use as the filename.
+
+        Falls back to a page-unique placeholder if the code can't be read, so
+        unreadable rows on different pages never collide on the same filename.
+        """
         try:
             code = await page.evaluate(
                 """(i) => {
@@ -232,9 +236,9 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
                 }""",
                 i,
             )
-            return code or f"row{i}"
+            return code or f"unknown_p{page_num}r{i}"
         except Exception:
-            return f"row{i}"
+            return f"unknown_p{page_num}r{i}"
 
     async def _read_total(self, page: Page):
         """Parse 'Mostrando de X até Y de N registro(s)' to get the total count."""
