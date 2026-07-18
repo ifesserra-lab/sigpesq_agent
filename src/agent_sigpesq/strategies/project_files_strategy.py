@@ -19,6 +19,7 @@ already being authenticated. It never logs in again (the portal rate-limits logi
 """
 from __future__ import annotations
 
+import glob
 import os
 import re
 from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError
@@ -101,9 +102,10 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
                     return ok > 0
                 done += 1
                 code = await self._row_code(page, i, page_num)
-                # resumable: skip projects whose PDF is already on disk
-                if self.skip_existing and os.path.exists(
-                        os.path.join(target_subdir, f"{_safe_name(code)}.pdf")):
+                # resumable: skip projects whose file is already on disk (any
+                # extension -- the "Projeto" file may be .pdf, .doc, .odt, ...)
+                if self.skip_existing and glob.glob(
+                        os.path.join(target_subdir, f"{_safe_name(code)}.*")):
                     ok += 1
                     continue
                 if await self._download_one(page, i, code, target_subdir):
