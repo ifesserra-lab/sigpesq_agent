@@ -264,9 +264,12 @@ Or, programmatically, pass `headless=False` to `SigpesqReportService(...)`.
 ## 🧠 Extracting project data (PDF → JSON via Mistral)
 
 After the PDFs are downloaded, a second step turns each project PDF into structured
-JSON using the **Mistral API**: Mistral OCR (`mistral-ocr-latest`) reads the PDF to
-markdown, then a chat model (`mistral-large-latest`, JSON mode) fills a fixed schema.
-Anything not present in the PDF is left `null` (the model never invents data).
+JSON using the **Mistral API**. To save API calls, digital PDFs are read **locally**
+with `pypdf` (no OCR call); only scanned PDFs (little/no embedded text) fall back to
+**Mistral OCR** (`mistral-ocr-latest`). The extracted text then goes to a chat model
+(`mistral-large-latest`, JSON mode) that fills a fixed schema. Anything not present in
+the PDF is left `null` (the model never invents data). `_meta.fonte_texto` records
+whether each project used `pdf-text` or `ocr`.
 
 ### Setup
 

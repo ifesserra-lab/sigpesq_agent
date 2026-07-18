@@ -99,6 +99,32 @@ class TestProjectExtractor(unittest.TestCase):
         self.assertIn("cronograma", projeto.meta.campos_ausentes)
         self.assertNotIn("titulo", projeto.meta.campos_ausentes)
 
+    def test_extract_project_uses_pdf_text_and_skips_ocr(self):
+        # digital PDF: embedded text is used, OCR call is skipped (cheaper)
+        ex = _make_extractor_with_mock({"titulo": "T"}, ["should-not-be-used"])
+        ex.pdf_text = lambda p: ("x" * 1000, 5)  # plenty of embedded text
+        with tempfile.TemporaryDirectory() as d:
+            pdf = os.path.join(d, "PJ_5.pdf")
+            with open(pdf, "wb") as f:
+                f.write(b"%PDF-1.7 dummy")
+            projeto = ex.extract_project(pdf)
+
+        self.assertEqual(projeto.meta.fonte_texto, "pdf-text")
+        self.assertEqual(projeto.meta.paginas, 5)
+        ex.client.ocr.process.assert_not_called()  # no OCR call for digital PDFs
+
+    def test_extract_project_falls_back_to_ocr_when_no_text(self):
+        ex = _make_extractor_with_mock({"titulo": "T"}, ["ocr text"])
+        ex.pdf_text = lambda p: ("", 0)  # scanned PDF, no embedded text
+        with tempfile.TemporaryDirectory() as d:
+            pdf = os.path.join(d, "PJ_6.pdf")
+            with open(pdf, "wb") as f:
+                f.write(b"%PDF-1.7 dummy")
+            projeto = ex.extract_project(pdf)
+
+        self.assertEqual(projeto.meta.fonte_texto, "ocr")
+        ex.client.ocr.process.assert_called_once()
+
     def test_extract_project_drops_nameless_equipe(self):
         # nameless entries are mis-classified work-plan/task titles -> must be dropped
         payload = {

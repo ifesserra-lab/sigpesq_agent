@@ -18,11 +18,13 @@ Homepage = "https://github.com/ifesserra-lab/sigpesq_agent"
 [project.optional-dependencies]
 extract = [
     "mistralai>=1.9,<2",
+    "pypdf>=4",
 ]
 dev = [
     "pytest",
     "pytest-cov",
     "mistralai>=1.9,<2",
+    "pypdf>=4",
     "black",
     "flake8",
     "isort",

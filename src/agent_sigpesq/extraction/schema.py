@@ -59,6 +59,7 @@ class Meta(BaseModel):
     paginas: Optional[int] = None
     extraido_em: Optional[str] = None
     modelo: Optional[str] = None
+    fonte_texto: Optional[str] = None   # "pdf-text" (local) or "ocr"
     campos_ausentes: List[str] = Field(default_factory=list)
 
 

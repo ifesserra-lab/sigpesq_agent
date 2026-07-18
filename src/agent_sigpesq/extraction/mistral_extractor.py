@@ -16,6 +16,7 @@ from .schema import Projeto, JSON_TEMPLATE
 OCR_MODEL = "mistral-ocr-latest"
 CHAT_MODEL = "mistral-large-latest"
 MAX_MARKDOWN_CHARS = 180_000  # keep the prompt within the model context window
+MIN_PDF_TEXT_CHARS = 400      # below this, treat the PDF as scanned and fall back to OCR
 
 SYSTEM_PROMPT = (
     "Você extrai dados estruturados de projetos de pesquisa a partir do texto "
@@ -82,7 +83,22 @@ class ProjectExtractor:
         self.ocr_model = ocr_model
         self.chat_model = chat_model
 
-    # --- step 1: OCR the PDF to markdown ---
+    # --- step 1a: cheap path -- read embedded text locally (no API call) ---
+    def pdf_text(self, pdf_path: str) -> Tuple[str, int]:
+        """Extract embedded text with pypdf. Returns ("", 0) for scanned PDFs or
+        if pypdf is unavailable, so the caller can fall back to OCR."""
+        try:
+            from pypdf import PdfReader
+        except Exception:
+            return "", 0
+        try:
+            reader = PdfReader(pdf_path)
+            text = "\n".join((pg.extract_text() or "") for pg in reader.pages)
+            return text, len(reader.pages)
+        except Exception:
+            return "", 0
+
+    # --- step 1b: OCR the PDF to markdown (for scanned PDFs) ---
     def ocr_pdf(self, pdf_path: str) -> Tuple[str, int]:
         """Upload the PDF, OCR it, and return (markdown_text, num_pages)."""
         with open(pdf_path, "rb") as f:
@@ -123,8 +139,15 @@ class ProjectExtractor:
     # --- full pipeline for one PDF ---
     def extract_project(self, pdf_path: str) -> Projeto:
         codigo = _codigo_from_filename(pdf_path)
-        markdown, num_pages = self.ocr_pdf(pdf_path)
-        raw = self.extract_fields(codigo, markdown)
+        # cheap path first: use embedded text (no OCR call) when the PDF is digital;
+        # fall back to OCR only for scanned PDFs with little/no extractable text.
+        text, num_pages = self.pdf_text(pdf_path)
+        if len(text.strip()) >= MIN_PDF_TEXT_CHARS:
+            source = "pdf-text"
+        else:
+            text, num_pages = self.ocr_pdf(pdf_path)
+            source = "ocr"
+        raw = self.extract_fields(codigo, text)
 
         raw["codigo"] = codigo  # filename is authoritative
         # Defensive: 'equipe' must be real people. Drop entries without a name
@@ -140,6 +163,7 @@ class ProjectExtractor:
             "paginas": num_pages,
             "extraido_em": datetime.now(timezone.utc).isoformat(),
             "modelo": self.chat_model,
+            "fonte_texto": source,
             "campos_ausentes": [],
         }
         projeto = Projeto.model_validate(raw)
