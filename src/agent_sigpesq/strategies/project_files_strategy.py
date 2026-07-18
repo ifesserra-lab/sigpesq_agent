@@ -219,26 +219,29 @@ class ProjectFilesDownloadStrategy(BasePlaywrightStrategy):
     async def _row_code(self, page: Page, i: int, page_num: int = 0) -> str:
         """Read the project code (e.g. 'PJ 9760') from row i for use as the filename.
 
-        Falls back to a page-unique placeholder if the code can't be read, so
+        Retries a few times (the cell text can be momentarily empty during the
+        modal-heavy flow), then falls back to a page-unique placeholder so
         unreadable rows on different pages never collide on the same filename.
         """
-        try:
-            code = await page.evaluate(
-                """(i) => {
-                    const btns = document.querySelectorAll("#ContentPlaceHolder_gvwLista a[id*='btnResumoProjeto']");
-                    const tr = btns[i] && btns[i].closest('tr');
-                    if (!tr) return null;
-                    for (const td of tr.querySelectorAll('td')) {
-                        const m = (td.innerText||'').match(/PJ\\s*\\d+/);
-                        if (m) return m[0];
-                    }
-                    return null;
-                }""",
-                i,
-            )
-            return code or f"unknown_p{page_num}r{i}"
-        except Exception:
-            return f"unknown_p{page_num}r{i}"
+        js = """(i) => {
+            const btns = document.querySelectorAll("#ContentPlaceHolder_gvwLista a[id*='btnResumoProjeto']");
+            const tr = btns[i] && btns[i].closest('tr');
+            if (!tr) return null;
+            for (const td of tr.querySelectorAll('td')) {
+                const m = (td.innerText||'').match(/PJ\\s*\\d+/);
+                if (m) return m[0];
+            }
+            return null;
+        }"""
+        for attempt in range(3):
+            try:
+                code = await page.evaluate(js, i)
+            except Exception:
+                code = None
+            if code:
+                return code
+            await page.wait_for_timeout(400)  # cell may still be rendering
+        return f"unknown_p{page_num}r{i}"
 
     async def _read_total(self, page: Page):
         """Parse 'Mostrando de X até Y de N registro(s)' to get the total count."""
