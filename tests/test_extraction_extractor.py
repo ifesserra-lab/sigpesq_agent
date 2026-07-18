@@ -99,6 +99,26 @@ class TestProjectExtractor(unittest.TestCase):
         self.assertIn("cronograma", projeto.meta.campos_ausentes)
         self.assertNotIn("titulo", projeto.meta.campos_ausentes)
 
+    def test_extract_project_drops_nameless_equipe(self):
+        # nameless entries are mis-classified work-plan/task titles -> must be dropped
+        payload = {
+            "titulo": "T",
+            "equipe": [
+                {"nome": "Maria Silva", "funcao": "Coordenadora"},
+                {"nome": None, "funcao": "Plano de trabalho do estudante 1 (PIBIC)"},
+                {"nome": "  ", "funcao": "Subprojeto X"},
+            ],
+        }
+        ex = _make_extractor_with_mock(payload, ["md"])
+        with tempfile.TemporaryDirectory() as d:
+            pdf = os.path.join(d, "PJ_9674.pdf")
+            with open(pdf, "wb") as f:
+                f.write(b"%PDF-1.7 dummy")
+            projeto = ex.extract_project(pdf)
+
+        self.assertEqual(len(projeto.equipe), 1)
+        self.assertEqual(projeto.equipe[0].nome, "Maria Silva")
+
 
 if __name__ == "__main__":
     unittest.main()

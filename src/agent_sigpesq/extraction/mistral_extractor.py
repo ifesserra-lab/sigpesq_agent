@@ -20,10 +20,21 @@ MAX_MARKDOWN_CHARS = 180_000  # keep the prompt within the model context window
 SYSTEM_PROMPT = (
     "Você extrai dados estruturados de projetos de pesquisa a partir do texto "
     "de um PDF. Responda SOMENTE com um objeto JSON válido, em português, no "
-    "formato pedido. Regras: use exatamente as chaves do modelo; se uma "
+    "formato pedido. Regras gerais: use exatamente as chaves do modelo; se uma "
     "informação não estiver no texto, use null (ou lista vazia) — NUNCA invente "
     "dados; datas no formato ISO (YYYY-MM-DD ou YYYY-MM); valores numéricos sem "
-    "símbolo de moeda (ex.: 25000.00)."
+    "símbolo de moeda (ex.: 25000.00).\n"
+    "Regras para 'equipe': liste APENAS pessoas reais identificadas por NOME "
+    "próprio. O campo 'funcao' é o PAPEL da pessoa (ex.: Coordenador, "
+    "Pesquisador, Bolsista, Colaborador, Estudante/Orientando) — NUNCA um título "
+    "de plano de trabalho, subprojeto, atividade ou tarefa. Se um item não tiver "
+    "nome de pessoa, NÃO o inclua em 'equipe'.\n"
+    "Regras para 'cronograma': títulos de planos de trabalho de estudantes, "
+    "subprojetos, etapas, atividades ou tarefas pertencem ao 'cronograma' (campo "
+    "'atividade'), e NÃO a 'equipe'.\n"
+    "Regras para 'coordenador': é o responsável/coordenador do projeto; extraia "
+    "o nome mesmo que apareça em seções de identificação, assinatura ou "
+    "responsável técnico."
 )
 
 
@@ -116,6 +127,14 @@ class ProjectExtractor:
         raw = self.extract_fields(codigo, markdown)
 
         raw["codigo"] = codigo  # filename is authoritative
+        # Defensive: 'equipe' must be real people. Drop entries without a name
+        # (usually mis-classified work-plan/task titles) -> they belong to cronograma.
+        equipe = raw.get("equipe")
+        if isinstance(equipe, list):
+            raw["equipe"] = [
+                m for m in equipe
+                if isinstance(m, dict) and (m.get("nome") or "").strip()
+            ]
         raw["_meta"] = {
             "arquivo": os.path.basename(pdf_path),
             "paginas": num_pages,
