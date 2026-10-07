@@ -23,6 +23,7 @@ class MembroEquipe(BaseModel):
     funcao: Optional[str] = None
     instituicao: Optional[str] = None
     carga_horaria_semanal: Optional[float] = None
+    fonte_bolsa: Optional[str] = None     # órgão pagador ou origem da bolsa (se bolsista)
 
 
 class Datas(BaseModel):
@@ -47,6 +48,16 @@ class Financiamento(BaseModel):
     valor_total: Optional[float] = None
     moeda: str = "BRL"
     fontes: List[FonteFinanciamento] = Field(default_factory=list)
+
+
+class Bolsa(BaseModel):
+    tipo: Optional[str] = None            # ex.: "PIBIC", "PIBITI", "PIVIC", "Apoio Técnico"
+    fonte: Optional[str] = None           # descrição ou identificação da chamada/edital
+    orgao_pagador: Optional[str] = None   # órgão que custeia a bolsa (ex.: "IFES", "FAPES", "CNPq", "CAPES")
+    e_parceria: Optional[bool] = None     # True se decorre de parceria/convênio externo
+    parceiro: Optional[str] = None        # nome da entidade/empresa parceira se houver
+    beneficiario: Optional[str] = None    # nome do bolsista/estudante, se identificado
+    valor: Optional[float] = None         # valor monetário da bolsa, se informado
 
 
 class Objetivos(BaseModel):
@@ -76,6 +87,7 @@ class Projeto(BaseModel):
     datas: Datas = Field(default_factory=Datas)
     cronograma: List[CronogramaItem] = Field(default_factory=list)
     financiamento: Financiamento = Field(default_factory=Financiamento)
+    bolsas: List[Bolsa] = Field(default_factory=list)
     meta: Meta = Field(..., alias="_meta")
 
     model_config = {"populate_by_name": True}
@@ -93,10 +105,15 @@ JSON_TEMPLATE = {
     "coordenador": {"nome": "string ou null", "email": "string ou null",
                     "campus": "string ou null", "titulacao": "string ou null"},
     "equipe": [{"nome": "string", "funcao": "string ou null",
-                "instituicao": "string ou null", "carga_horaria_semanal": "number ou null"}],
+                "instituicao": "string ou null", "carga_horaria_semanal": "number ou null",
+                "fonte_bolsa": "string ou null"}],
     "datas": {"inicio": "YYYY-MM-DD ou null", "fim": "YYYY-MM-DD ou null",
               "duracao_meses": "number ou null"},
     "cronograma": [{"atividade": "string", "inicio": "YYYY-MM ou null", "fim": "YYYY-MM ou null"}],
     "financiamento": {"valor_total": "number ou null", "moeda": "BRL",
                       "fontes": [{"fonte": "string", "valor": "number ou null", "tipo": "string ou null"}]},
+    "bolsas": [{"tipo": "string ou null", "fonte": "string ou null",
+                "orgao_pagador": "IFES, FAPES, CNPq, etc. ou null",
+                "e_parceria": "boolean ou null", "parceiro": "string ou null",
+                "beneficiario": "string ou null", "valor": "number ou null"}],
 }

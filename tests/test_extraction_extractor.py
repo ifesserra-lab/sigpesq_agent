@@ -76,7 +76,16 @@ class TestProjectExtractor(unittest.TestCase):
             "titulo": "Projeto X",
             "descricao": "Uma descrição.",
             "coordenador": {"nome": "Fulano de Tal", "campus": "Serra"},
-            "equipe": [{"nome": "Ana", "funcao": "Bolsista"}],
+            "equipe": [{"nome": "Ana", "funcao": "Bolsista", "fonte_bolsa": "FAPES"}],
+            "bolsas": [{
+                "tipo": "PIBITI",
+                "fonte": "Edital FAPES 07/2026",
+                "orgao_pagador": "FAPES",
+                "e_parceria": False,
+                "parceiro": None,
+                "beneficiario": "Ana",
+                "valor": 700.0,
+            }],
             "codigo": "WRONG",  # must be overridden by the filename
         }
         ex = _make_extractor_with_mock(payload, ["# Projeto", "conteudo"])
@@ -90,6 +99,10 @@ class TestProjectExtractor(unittest.TestCase):
         self.assertEqual(projeto.titulo, "Projeto X")
         self.assertEqual(projeto.coordenador.nome, "Fulano de Tal")
         self.assertEqual(projeto.equipe[0].nome, "Ana")
+        self.assertEqual(projeto.equipe[0].fonte_bolsa, "FAPES")
+        self.assertEqual(len(projeto.bolsas), 1)
+        self.assertEqual(projeto.bolsas[0].orgao_pagador, "FAPES")
+        self.assertFalse(projeto.bolsas[0].e_parceria)
         # _meta filled by our code
         self.assertEqual(projeto.meta.arquivo, "PJ_9999.pdf")
         self.assertEqual(projeto.meta.paginas, 2)

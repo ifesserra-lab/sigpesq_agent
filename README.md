@@ -313,9 +313,10 @@ reports/project_files_json/
 
 `codigo`, `titulo`, `descricao`, `palavras_chave`, `area_conhecimento`,
 `linha_pesquisa`, `objetivos` (geral + especificos), `coordenador`
-(nome/email/campus/titulacao), `equipe` (nome/funcao/instituicao/carga_horaria),
+(nome/email/campus/titulacao), `equipe` (nome/funcao/instituicao/carga_horaria/fonte_bolsa),
 `datas` (inicio/fim/duracao_meses), `cronograma` (atividade/inicio/fim),
-`financiamento` (valor_total/moeda/fontes), and `_meta`
+`financiamento` (valor_total/moeda/fontes), `bolsas`
+(tipo/fonte/orgao_pagador/e_parceria/parceiro/beneficiario/valor), and `_meta`
 (arquivo, paginas, extraido_em, modelo, `campos_ausentes`).
 
 <details>
@@ -326,10 +327,11 @@ reports/project_files_json/
   "codigo": "PJ 9760",
   "titulo": "SIGHUB-IA: Inteligência Adaptativa Multivariável ...",
   "coordenador": {"nome": "Heitor Caroni Nogueira", "email": "heitor@sigmais.com.br", "campus": "Vitória/ES"},
-  "equipe": [{"nome": "Oscar Machado de Souza", "funcao": "Cientista de Dados", "carga_horaria_semanal": 14.0}],
+  "equipe": [{"nome": "Oscar Machado de Souza", "funcao": "Cientista de Dados", "carga_horaria_semanal": 14.0, "fonte_bolsa": "FAPES"}],
   "datas": {"inicio": "2025-01-01", "fim": "2026-12-31", "duracao_meses": 24},
   "financiamento": {"valor_total": 2016851.68, "moeda": "BRL",
     "fontes": [{"fonte": "Subvenção Econômica (FAPES)", "valor": 1310953.66, "tipo": "Pública"}]},
+  "bolsas": [{"tipo": "PIBITI", "fonte": "Subvenção FAPES", "orgao_pagador": "FAPES", "e_parceria": false, "parceiro": null, "beneficiario": "Oscar Machado de Souza", "valor": null}],
   "_meta": {"arquivo": "PJ_9760.pdf", "paginas": 66, "modelo": "mistral-large-latest", "campos_ausentes": []}
 }
 ```
